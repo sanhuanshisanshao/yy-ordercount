@@ -5,12 +5,19 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"yy-ordercount/config"
 	"yy-ordercount/server"
 )
 
 func main() {
 
-	server.Run()
+	conf, err := config.ReadConfig("config.conf")
+	if err != nil {
+		log.Errorf("read config error %v", err)
+		return
+	}
+
+	server.Run(conf)
 
 	sigChan := make(chan os.Signal)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)

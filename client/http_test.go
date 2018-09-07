@@ -14,7 +14,7 @@ type para struct {
 
 func TestHttpPost(t *testing.T) {
 	url := "http://www.uuplush.com/user/fieldlist"
-	cookie := "safedog-flow-item=635BE5DFF566A6414BC4F418238FBA41; userid=4904; username=4904; ASP.NET_SessionId=avhcnzfz1510lv00izjp0apy"
+	cookie := "safedog-flow-item=635BE5DFF566A6414BC4F418238FBA41; ASP.NET_SessionId=ymuyaerb0pgszvvki43333mf; userid=4904; username=4904"
 	para := para{}
 	para.Gcid = 3
 	para.Gpid = 1

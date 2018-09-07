@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 	"yy-ordercount/client"
+	"yy-ordercount/config"
 	"yy-ordercount/util"
 )
 
@@ -162,14 +163,15 @@ func (s *Server) GetYYOrderInfo() {
 	}
 }
 
-func Run() {
+func Run(conf config.Config) {
 	err := client.NewRedis(REDIS_ADDR, "")
 	if err != nil {
 		log.Fatalf("connect to redis server failed: %v", err)
 	}
 	log.Infof("connect to redis success")
 
-	server := NewServer(COOKIE)
+	server := NewServer(conf.Cookie)
+
 	go server.GetYYOrderInfo()
 
 	http.HandleFunc("/ping", server.Ping)
