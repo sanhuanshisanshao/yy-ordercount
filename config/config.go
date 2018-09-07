@@ -23,7 +23,11 @@ type Config struct {
 //Read Server's Config Value from "path"
 func ReadConfig(path string) (Config, error) {
 	var config Config
-	conf, err := ini.Load(path)
+
+	conf, err := ini.LoadSources(ini.LoadOptions{
+		IgnoreInlineComment: true,
+	}, path)
+	//conf, err := ini.Load(path)
 	if err != nil {
 		log.Println("load config file fail!")
 		return config, err

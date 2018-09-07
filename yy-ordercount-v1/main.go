@@ -17,6 +17,8 @@ func main() {
 		return
 	}
 
+	log.Infof("cookie: %v", conf.Cookie)
+
 	server.Run(conf)
 
 	sigChan := make(chan os.Signal)

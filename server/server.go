@@ -119,11 +119,13 @@ func (s *Server) getTodayOrderCount() (int64, error) {
 func (s *Server) GetYYOrderInfo() {
 	//每分钟定时执行，余额误差保持在 1 min 之内
 	for {
-		log.Infof("start to get gcid data ...")
 		go func() {
 			if time.Now().Hour() < 8 {
 				return
 			}
+
+			log.Infof("start to get gcid data ...")
+
 			for i := 1; i <= MAX_GCID; i++ {
 				para := para{}
 				para.Gcid = i
@@ -137,6 +139,7 @@ func (s *Server) GetYYOrderInfo() {
 
 				if len(resp) <= 10 {
 					//gcid =[4,6,7]
+					log.Warnf("http post data %v len %v error", string(resp), len(resp))
 					continue
 				}
 
@@ -145,6 +148,8 @@ func (s *Server) GetYYOrderInfo() {
 				for j := 0; j < len(m)-1; j++ {
 					v := m[j]
 					key := fmt.Sprintf(KEY_FORMATE, "5", v["gpid"], i, v["fieldnum"])
+					log.Infof("format_key: %v", key)
+
 					client.RedisClient.HSet(key, "remain", v["syprice"])
 					client.RedisClient.HSet(key, "total", m[len(m)-2]["syprice"])
 					client.RedisClient.HSet(key, "end_time", v["kjtime"])
