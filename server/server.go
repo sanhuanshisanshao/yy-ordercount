@@ -18,7 +18,6 @@ const (
 	REDIS_ADDR  = "0.0.0.0:6379"
 	KEY_FORMATE = "%v_%v_%v_%v"
 	URL         = "http://www.uuplush.com/user/fieldlist"
-	COOKIE      = "safedog-flow-item=635BE5DFF566A6414BC4F418238FBA41; userid=4904; username=4904; ASP.NET_SessionId=avhcnzfz1510lv00izjp0apy"
 )
 
 type para struct {
