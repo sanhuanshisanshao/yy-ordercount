@@ -64,12 +64,11 @@ func (u *Users) Delete(cookie string) {
 
 func (u *Users) AutoBuy() {
 	for {
-		u.Lock()
+		logrus.Infof("start to Auto buy .... at %v", time.Now())
 		for _, v := range u.Users {
 			v.autoBuy()
 		}
-		defer u.Unlock()
-		<-time.After(11 * time.Second)
+		<-time.After(5 * time.Minute)
 	}
 }
 
@@ -83,56 +82,42 @@ func (u *user) autoBuy() {
 		Price    int    `json:"buyprice"`
 	}{}
 
-	for {
-		if u.IsDeleted {
-			logrus.Errorf("cookie %v is deleted")
-
-			time.After(11 * time.Minute)
-			break
-		}
-		account, err := u.getAccount() //获取账户余额
-		if err != nil {
-			logrus.Errorf("auto buy get account failed：%v", err)
-
-			time.After(11 * time.Minute)
-			break
-		}
-		if (int(account) / 100) < 1 { //余额低于100不能下单
-			logrus.Errorf("auto buy get account %v less than 100", account)
-
-			time.After(11 * time.Minute)
-			break
-		}
-
-		gcID, gpID, field, err := u.getOrder(account) //查询最近可下单期号
-		if err != nil {
-			logrus.Errorf("auto buy try to buy failed：%v", err)
-
-			time.After(11 * time.Minute)
-			break
-		}
-
-		para.OrderNum = 49040000000000000 + int(time.Now().Unix()*1000) + rand.Intn(999-100) + 100
-		para.Gcid = gcID
-		para.Gpid = gpID
-		para.FieldNum = field
-		para.Price = (int(account) / 100) * 100
-		//para.Price = 100
-
-		ref := fmt.Sprintf("http://www.uuplush.com/buyorder?gcid=%d&gpid=%d&fieldnum=%s", gcID, gpID, field)
-		b, _ := json.Marshal(&para)
-		resp, err := client.HttpPost(URL, string(b), u.Cookie, ref) //下单
-		if err != nil {
-			logrus.Errorf("auto buy order failed：%v", err)
-
-			time.After(11 * time.Minute)
-			break
-		}
-
-		logrus.Infof("buy response: %v", string(resp))
-
-		<-time.After(11 * time.Minute)
+	if u.IsDeleted {
+		logrus.Warnf("cookie %v is deleted")
+		return
 	}
+	account, err := u.getAccount() //获取账户余额
+	if err != nil {
+		logrus.Errorf("auto buy get account failed：%v", err)
+		return
+	}
+	if (int(account) / 100) < 1 { //余额低于100不能下单
+		logrus.Warnf("auto buy get account %.2f less than 100", account)
+		return
+	}
+
+	gcID, gpID, field, err := u.getOrder(account) //查询最近可下单期号
+	if err != nil {
+		logrus.Errorf("auto buy try to buy failed：%v", err)
+		return
+	}
+
+	para.OrderNum = 49040000000000000 + int(time.Now().Unix()*1000) + rand.Intn(999-100) + 100
+	para.Gcid = gcID
+	para.Gpid = gpID
+	para.FieldNum = field
+	para.Price = (int(account) / 100) * 100
+	//para.Price = 100
+
+	ref := fmt.Sprintf("http://www.uuplush.com/buyorder?gcid=%d&gpid=%d&fieldnum=%s", gcID, gpID, field)
+	b, _ := json.Marshal(&para)
+	resp, err := client.HttpPost(URL, string(b), u.Cookie, ref) //下单
+	if err != nil {
+		logrus.Errorf("auto buy order failed：%v", err)
+		return
+	}
+
+	logrus.Infof("buy response: %v at %v", string(resp), time.Now())
 }
 
 //getAccount 获取账户余额
