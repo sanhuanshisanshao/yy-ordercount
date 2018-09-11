@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"testing"
 )
@@ -20,4 +21,10 @@ func TestHttpPost(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 	fmt.Printf("%.2f", f)
+}
+
+func TestRandom(t *testing.T) {
+	for i := 0; i <= 100; i++ {
+		fmt.Println(rand.Intn(999-100) + 100)
+	}
 }

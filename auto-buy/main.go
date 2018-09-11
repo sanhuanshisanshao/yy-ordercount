@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"yy-ordercount/auto-buy/baseinfo"
 	"yy-ordercount/auto-buy/user"
+	"yy-ordercount/config"
 )
 
 func Ping(resp http.ResponseWriter, req *http.Request) {
@@ -22,8 +23,15 @@ func SetCookie(resp http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	conf, err := config.ReadConfig("config.conf")
+	if err != nil {
+		return
+	}
+
+	logrus.Infof("cookie: %v", conf.Cookie)
+
 	//数据初始化
-	user.NewUsers()
+	user.NewUsers(conf.Cookie)
 	baseinfo.NewAreaIds()
 	baseinfo.NewFieldInfo()
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,15 +26,16 @@ type Users struct {
 
 var UniqueUsers *Users //唯一用户实例
 
-func NewUsers() {
+func NewUsers(cookie string) {
 	UniqueUsers = &Users{
 		Users: make([]user, 0),
 	}
-
-	UniqueUsers.Users = append(UniqueUsers.Users, user{
-		Cookie:    "userid=3438; username=3438; ASP.NET_SessionId=tl24rulx1dihglaob13e1ahy",
-		IsDeleted: false,
-	})
+	if len(cookie) > 0 {
+		UniqueUsers.Users = append(UniqueUsers.Users, user{
+			Cookie:    cookie,
+			IsDeleted: false,
+		})
+	}
 
 	go UniqueUsers.AutoBuy()
 }
@@ -67,7 +69,7 @@ func (u *Users) AutoBuy() {
 			v.autoBuy()
 		}
 		defer u.Unlock()
-		<-time.After(7 * time.Second)
+		<-time.After(11 * time.Second)
 	}
 }
 
@@ -85,20 +87,20 @@ func (u *user) autoBuy() {
 		if u.IsDeleted {
 			logrus.Errorf("cookie %v is deleted")
 
-			time.After(10 * time.Minute)
+			time.After(11 * time.Minute)
 			break
 		}
 		account, err := u.getAccount() //获取账户余额
 		if err != nil {
 			logrus.Errorf("auto buy get account failed：%v", err)
 
-			time.After(10 * time.Minute)
+			time.After(11 * time.Minute)
 			break
 		}
 		if (int(account) / 100) < 1 { //余额低于100不能下单
 			logrus.Errorf("auto buy get account %v less than 100", account)
 
-			time.After(10 * time.Minute)
+			time.After(11 * time.Minute)
 			break
 		}
 
@@ -106,16 +108,16 @@ func (u *user) autoBuy() {
 		if err != nil {
 			logrus.Errorf("auto buy try to buy failed：%v", err)
 
-			time.After(10 * time.Minute)
+			time.After(11 * time.Minute)
 			break
 		}
 
-		para.OrderNum = 49040000000000000 + int(time.Now().Unix()*1000) + 763
+		para.OrderNum = 49040000000000000 + int(time.Now().Unix()*1000) + rand.Intn(999-100) + 100
 		para.Gcid = gcID
 		para.Gpid = gpID
 		para.FieldNum = field
-		//TODO: para.Price = (int(account) / 100) * 100
-		para.Price = 100
+		para.Price = (int(account) / 100) * 100
+		//para.Price = 100
 
 		ref := fmt.Sprintf("http://www.uuplush.com/buyorder?gcid=%d&gpid=%d&fieldnum=%s", gcID, gpID, field)
 		b, _ := json.Marshal(&para)
@@ -123,13 +125,13 @@ func (u *user) autoBuy() {
 		if err != nil {
 			logrus.Errorf("auto buy order failed：%v", err)
 
-			time.After(10 * time.Minute)
+			time.After(11 * time.Minute)
 			break
 		}
 
 		logrus.Infof("buy response: %v", string(resp))
 
-		<-time.After(10 * time.Minute)
+		<-time.After(11 * time.Minute)
 	}
 }
 
