@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 )
 
 type para struct {
@@ -37,4 +38,40 @@ func TestHttpPost(t *testing.T) {
 	for _, v := range r {
 		fmt.Println(v)
 	}
+}
+
+type buy struct {
+	OrderNum int    `json:"ordernum"`
+	Gcid     int    `json:"gcid"`
+	Gpid     int    `json:"gpid"`
+	FieldNum string `json:"fieldnum"`
+	Price    int    `json:"buyprice"`
+}
+
+func TestBuyOrder(t *testing.T) {
+	URL := "http://www.uuplush.com/user/buyorder"
+	cookie := ""
+
+	para := buy{
+		OrderNum: 49040000000000000 + int(time.Now().Unix()*1000) + 763,
+		Gcid:     12,
+		Gpid:     31,
+		FieldNum: "180910-74",
+		Price:    100,
+	}
+	//gcid=11&gpid=26&fieldnum=180910-50
+	b, _ := json.Marshal(&para)
+
+	resp, err := HttpPost(URL, string(b), cookie)
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+
+	fmt.Printf("resp: %v", string(resp))
+
+}
+
+func TestNewRedis(t *testing.T) {
+	//fmt.Println(49040000000000000 + int(time.Now().Unix()*1000) + 763)
+	fmt.Println(time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 9, 0, 0, 0, time.Local))
 }

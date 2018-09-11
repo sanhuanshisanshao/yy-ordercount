@@ -138,7 +138,7 @@ func (s *Server) GetYYOrderInfo() {
 				}
 
 				if len(resp) <= 10 {
-					//gcid =[4,6,7]
+					//gcid =[4,6,7,9,10] 11,12,13,15,
 					log.Warnf("http post data %v len %v error", string(resp), len(resp))
 					continue
 				}

@@ -7,11 +7,11 @@ import (
 	"strings"
 )
 
-func HttpPost(url, param, cookie string) ([]byte, error) {
-	return httpPost(url, param, cookie)
+func HttpPost(url, param, cookie, referer string) ([]byte, error) {
+	return httpPost(url, param, cookie, referer)
 }
 
-func httpPost(urlStr string, reqBody string, cookie string) (respBytes []byte, err error) {
+func httpPost(urlStr string, reqBody string, cookie, referer string) (respBytes []byte, err error) {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -20,7 +20,9 @@ func httpPost(urlStr string, reqBody string, cookie string) (respBytes []byte, e
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Cookie", cookie)
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36")
-	req.Header.Add("Referer", "http://www.uuplush.com/buyorder?gcid=12&gpid=31&fieldnum=180910-74")
+	if len(referer) > 0 {
+		req.Header.Add("Referer", referer)
+	}
 
 	if err != nil {
 		return nil, err
