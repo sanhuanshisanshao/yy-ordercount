@@ -67,7 +67,7 @@ func (u *Users) Delete(cookie string) {
 func (u *Users) AutoBuy() {
 	for {
 		for _, v := range u.Users {
-			logrus.Infof("start to Auto buy .... at %v", time.Now())
+			logrus.Infof("start to Auto buy .... ")
 			v.autoBuy()
 		}
 		<-time.After(5 * time.Minute)
@@ -94,7 +94,7 @@ func (u *user) autoBuy() {
 		return
 	}
 	if (int(account) / 100) < 2 { //余额低于200不能下单
-		logrus.Warnf("auto buy get account %.2f less than 200", account)
+		logrus.Warnf("auto buy get account ¥%.2f less than ¥200", account)
 		return
 	}
 
@@ -119,7 +119,7 @@ func (u *user) autoBuy() {
 		return
 	}
 
-	logrus.Infof("buy %v response: ¥%v at %v", string(resp), para.Price, time.Now())
+	logrus.Infof("buy ¥%v response:%v", para.Price, string(resp))
 }
 
 //getAccount 获取账户余额

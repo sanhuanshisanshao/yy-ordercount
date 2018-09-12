@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/sirupsen/logrus"
-	"log"
+	"fmt"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"yy-ordercount/auto-buy/baseinfo"
 	"yy-ordercount/auto-buy/config"
@@ -15,7 +15,7 @@ func Ping(resp http.ResponseWriter, req *http.Request) {
 
 func SetCookie(resp http.ResponseWriter, req *http.Request) {
 	cookie := req.FormValue("cookie")
-	logrus.Infof("set cookie %v success", cookie)
+	log.Infof("set cookie %v success", cookie)
 	if len(cookie) > 0 {
 		user.UniqueUsers.Add(cookie)
 	}
@@ -24,7 +24,8 @@ func SetCookie(resp http.ResponseWriter, req *http.Request) {
 
 func init() {
 	// Log as JSON instead of the default ASCII formatter.
-	logrus.SetFormatter(&logrus.TextFormatter{})
+	fmt.Println("set log farmat")
+	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 }
 
 func main() {
@@ -33,7 +34,7 @@ func main() {
 		return
 	}
 
-	logrus.Infof("cookie: %v", conf.Cookie)
+	log.Infof("cookie: %v", conf.Cookie)
 
 	//数据初始化
 	user.NewUsers(conf.Cookie)
