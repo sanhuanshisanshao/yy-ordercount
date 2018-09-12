@@ -26,15 +26,17 @@ type Users struct {
 
 var UniqueUsers *Users //唯一用户实例
 
-func NewUsers(cookie string) {
+func NewUsers(cookie []string) {
 	UniqueUsers = &Users{
 		Users: make([]user, 0),
 	}
 	if len(cookie) > 0 {
-		UniqueUsers.Users = append(UniqueUsers.Users, user{
-			Cookie:    cookie,
-			IsDeleted: false,
-		})
+		for _, v := range cookie {
+			UniqueUsers.Users = append(UniqueUsers.Users, user{
+				Cookie:    v,
+				IsDeleted: false,
+			})
+		}
 	}
 
 	go UniqueUsers.AutoBuy()
@@ -64,8 +66,8 @@ func (u *Users) Delete(cookie string) {
 
 func (u *Users) AutoBuy() {
 	for {
-		logrus.Infof("start to Auto buy .... at %v", time.Now())
 		for _, v := range u.Users {
+			logrus.Infof("start to Auto buy .... at %v", time.Now())
 			v.autoBuy()
 		}
 		<-time.After(5 * time.Minute)
@@ -91,8 +93,8 @@ func (u *user) autoBuy() {
 		logrus.Errorf("auto buy get account failed：%v", err)
 		return
 	}
-	if (int(account) / 100) < 1 { //余额低于100不能下单
-		logrus.Warnf("auto buy get account %.2f less than 100", account)
+	if (int(account) / 100) < 2 { //余额低于200不能下单
+		logrus.Warnf("auto buy get account %.2f less than 200", account)
 		return
 	}
 
@@ -117,7 +119,7 @@ func (u *user) autoBuy() {
 		return
 	}
 
-	logrus.Infof("buy response: %v at %v", string(resp), time.Now())
+	logrus.Infof("buy %v response: ¥%v at %v", string(resp), para.Price, time.Now())
 }
 
 //getAccount 获取账户余额

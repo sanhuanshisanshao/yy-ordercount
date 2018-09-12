@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 	"yy-ordercount/auto-buy/baseinfo"
+	"yy-ordercount/auto-buy/config"
 	"yy-ordercount/auto-buy/user"
-	"yy-ordercount/config"
 )
 
 func Ping(resp http.ResponseWriter, req *http.Request) {
@@ -20,6 +20,11 @@ func SetCookie(resp http.ResponseWriter, req *http.Request) {
 		user.UniqueUsers.Add(cookie)
 	}
 	resp.Write([]byte("success"))
+}
+
+func init() {
+	// Log as JSON instead of the default ASCII formatter.
+	logrus.SetFormatter(&logrus.TextFormatter{})
 }
 
 func main() {
