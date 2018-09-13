@@ -18,8 +18,11 @@ func httpPost(urlStr string, reqBody string, cookie, referer string) (respBytes 
 	client := &http.Client{Transport: transport}
 	req, err := http.NewRequest("POST", urlStr, strings.NewReader(reqBody))
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Cookie", cookie)
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36")
+	if len(cookie) > 0 {
+		req.Header.Add("Cookie", cookie)
+
+	}
 	if len(referer) > 0 {
 		req.Header.Add("Referer", referer)
 	}

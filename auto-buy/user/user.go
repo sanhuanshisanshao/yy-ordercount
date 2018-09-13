@@ -14,7 +14,11 @@ import (
 	"yy-ordercount/util"
 )
 
+var paraFormat = "{\"msgtype\": \"text\",\"text\": {\"content\": \"%s\"}, \"at\": {\"atMobiles\": [\"%s\"], \"isAtAll\": false}}"
+
 type user struct {
+	Url       string
+	Phone     string
 	Cookie    string
 	IsDeleted bool
 }
@@ -26,15 +30,18 @@ type Users struct {
 
 var UniqueUsers *Users //唯一用户实例
 
-func NewUsers(cookie []string) {
+func NewUsers(cookie []string, url, phone string) {
 	UniqueUsers = &Users{
 		Users: make([]user, 0),
 	}
+
 	if len(cookie) > 0 {
 		for _, v := range cookie {
 			UniqueUsers.Users = append(UniqueUsers.Users, user{
 				Cookie:    v,
 				IsDeleted: false,
+				Url:       url,
+				Phone:     phone,
 			})
 		}
 	}
@@ -120,6 +127,19 @@ func (u *user) autoBuy() {
 	}
 
 	logrus.Infof("buy ¥%v response:%v", para.Price, string(resp))
+
+	msg := make(map[string]string)
+	err = json.Unmarshal(resp, &msg)
+	if err != nil {
+		logrus.Errorf("json unmarshal error：%v", err)
+		return
+	}
+
+	err = u.SendDDMsg(fmt.Sprintf("buy ¥%v  %v", para.Price, msg["message"]), u.Phone)
+	if err != nil {
+		logrus.Errorf("send dingding msg error：%v", err)
+		return
+	}
 }
 
 //getAccount 获取账户余额
@@ -170,7 +190,7 @@ LABEL:
 				logrus.Errorf("get order parse float error: %v", err)
 				return gcid, gpid, fieldNum, err
 			}
-			if f <= price+20000 { //20000并发容错
+			if f <= price {
 				i++
 				if i == 4 { //每个地区取前三个有效期号，无剩余交易量则取下一个地区
 					logrus.Warnf("gcid %v order is full", val.Gcid)
@@ -185,4 +205,15 @@ LABEL:
 		}
 	}
 	return
+}
+
+func (u *user) SendDDMsg(content, phone string) error {
+	para := fmt.Sprintf(paraFormat, content, phone)
+
+	resp, err := client.HttpPost(u.Url, para, "", "")
+	if err != nil {
+		return err
+	}
+	logrus.Infof("send dd msg resp: %v", string(resp))
+	return nil
 }
