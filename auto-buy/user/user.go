@@ -119,7 +119,7 @@ func (u *user) autoBuy() (s string) {
 		return
 	}
 
-	gcID, gpID, field, err := u.getOrder(account) //查询最近可下单期号
+	gcID, gpID, area, field, err := u.getOrder(account) //查询最近可下单期号
 	if err != nil {
 		logrus.Errorf("auto buy try to buy failed：%v", err)
 		return
@@ -155,7 +155,7 @@ func (u *user) autoBuy() (s string) {
 		return
 	}
 
-	err = u.SendDDMsg(fmt.Sprintf("下单 ¥%v  %v", para.Price, msg["message"]), u.Phone)
+	err = u.SendDDMsg(fmt.Sprintf("下单 %v %v ¥%v: %v", area, field, para.Price, msg["message"]), u.Phone)
 	if err != nil {
 		logrus.Errorf("send DD msg error：%v", err)
 		return
@@ -180,7 +180,7 @@ func (u *user) getAccount() (float64, error) {
 	return f, nil
 }
 
-func (u *user) getOrder(price float64) (gcid int, gpid int, fieldNum string, err error) {
+func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNum string, err error) {
 	url := "http://www.uuplush.com/user/fieldlist"
 	var p = struct {
 		Gcid int `json:"gcid"`
@@ -196,11 +196,11 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, fieldNum string, err
 		b, _ := json.Marshal(&p)
 		resp, err := client.HttpPost(url, string(b), u.Cookie, "")
 		if err != nil {
-			return gcid, gpid, fieldNum, err
+			return gcid, gpid, area, fieldNum, err
 		}
 		if len(resp) < 10 {
 			logrus.Errorf("http post %v error", string(resp))
-			return gcid, gpid, fieldNum, fmt.Errorf("http post %v error", string(resp))
+			return gcid, gpid, area, fieldNum, fmt.Errorf("http post %v error", string(resp))
 		}
 		m := util.ConvertResponse(resp)
 
@@ -210,7 +210,7 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, fieldNum string, err
 			f, err := strconv.ParseFloat(s, 32)
 			if err != nil {
 				logrus.Errorf("get order parse float error: %v", err)
-				return gcid, gpid, fieldNum, err
+				return gcid, gpid, area, fieldNum, err
 			}
 			if f <= price {
 				i++
@@ -230,9 +230,10 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, fieldNum string, err
 			t, err := time.Parse("2006-01-02 15:04", v["kjtime"].(string))
 			if err != nil {
 				log.Errorf("time parse %v error: %v", v["kjtime"].(string), err)
-				return 0, 0, "", fmt.Errorf("parse time error: %v", err)
+				return 0, 0, "", "", fmt.Errorf("parse time error: %v", err)
 			}
 			candicate["kjTime"] = t
+			candicate["area"] = val.Area
 			candidates = append(candidates, candicate)
 			break
 		}
@@ -248,9 +249,9 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, fieldNum string, err
 	}
 
 	if len(candidates) > 0 {
-		return min["gcid"].(int), min["gpid"].(int), min["fieldNum"].(string), nil
+		return min["gcid"].(int), min["gpid"].(int), min["area"].(string), min["fieldNum"].(string), nil
 	}
-	return 0, 0, "", fmt.Errorf("get no condicate")
+	return 0, 0, "", "", fmt.Errorf("get no condicate")
 }
 
 func (u *user) SendDDMsg(content, phone string) error {
