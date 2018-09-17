@@ -9,6 +9,8 @@ import (
 	"yy-ordercount/auto-buy/user"
 )
 
+//https://oapi.dingtalk.com/robot/send?access_token=cccb074aa76395fe9d4243ba4e8d8691edea2ccd0851590a175d433a76eb42e3
+
 func Ping(resp http.ResponseWriter, req *http.Request) {
 	resp.Write([]byte("OK"))
 }
@@ -37,7 +39,7 @@ func main() {
 	log.Infof("cookie: %v", conf.Cookie)
 
 	//数据初始化
-	user.NewUsers(conf.Cookie)
+	user.NewUsers(conf.Cookie, conf.DDUrl, conf.Phone)
 	baseinfo.NewAreaIds()
 	baseinfo.NewFieldInfo()
 

@@ -9,6 +9,8 @@ import (
 //struct of simple-protel.conf
 type Config struct {
 	Cookie []string `ini:"cookie"`
+	DDUrl  string   `ini:"dd_url"`
+	Phone  string   `ini:"phone"`
 }
 
 //Read Server's Config Value from "path"

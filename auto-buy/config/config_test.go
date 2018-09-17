@@ -12,5 +12,5 @@ func TestReadConfig(t *testing.T) {
 
 	}
 
-	fmt.Println(len(conf.Cookie))
+	fmt.Println(conf)
 }
