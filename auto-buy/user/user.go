@@ -3,8 +3,10 @@ package user
 import (
 	"encoding/json"
 	"fmt"
+	"git.weipaitang.com/ai/expediency/log"
 	"github.com/sirupsen/logrus"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -66,6 +68,7 @@ func (u *Users) Delete(cookie string) {
 	defer u.Unlock()
 	for _, v := range u.Users {
 		if v.Cookie == cookie {
+			logrus.Infof("delete cookie success")
 			v.IsDeleted = true
 		}
 	}
@@ -73,15 +76,26 @@ func (u *Users) Delete(cookie string) {
 
 func (u *Users) AutoBuy() {
 	for {
+		t := 0
 		for _, v := range u.Users {
-			logrus.Infof("start to Auto buy .... ")
-			v.autoBuy()
+			if v.IsDeleted == false {
+				t++
+				logrus.Infof("start to Auto buy .... ")
+				if s := v.autoBuy(); s == "over" {
+					go u.Delete(v.Cookie)
+				}
+			}
 		}
-		<-time.After(5 * time.Minute)
+		if t == 0 {
+			logrus.Warnf("no account to buy then stop server ...")
+			os.Exit(200)
+		}
+
+		<-time.After(2 * time.Minute)
 	}
 }
 
-func (u *user) autoBuy() {
+func (u *user) autoBuy() (s string) {
 	URL := "http://www.uuplush.com/user/buyorder"
 	para := struct {
 		OrderNum int    `json:"ordernum"`
@@ -126,6 +140,12 @@ func (u *user) autoBuy() {
 		return
 	}
 
+	if strings.Contains(string(resp), "每日限20单") {
+		u.SendDDMsg(fmt.Sprintf("下单 ¥%v 失败: %v", para.Price, "每日限20单"), u.Phone)
+		s = "over"
+		return
+	}
+
 	logrus.Infof("buy ¥%v response:%v", para.Price, string(resp))
 
 	msg := make(map[string]string)
@@ -135,11 +155,12 @@ func (u *user) autoBuy() {
 		return
 	}
 
-	err = u.SendDDMsg(fmt.Sprintf("buy ¥%v  %v", para.Price, msg["message"]), u.Phone)
+	err = u.SendDDMsg(fmt.Sprintf("下单 ¥%v  %v", para.Price, msg["message"]), u.Phone)
 	if err != nil {
-		logrus.Errorf("send dingding msg error：%v", err)
+		logrus.Errorf("send DD msg error：%v", err)
 		return
 	}
+	return
 }
 
 //getAccount 获取账户余额
@@ -165,9 +186,10 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, fieldNum string, err
 		Gcid int `json:"gcid"`
 		Gpid int `json:"gpid"`
 	}{}
+	candidates := []map[string]interface{}{}
 
-LABEL:
 	for _, val := range baseinfo.UniqueAreaIds {
+		candicate := make(map[string]interface{})
 		p.Gcid = val.Gcid
 		p.Gpid = val.Gpid
 
@@ -194,26 +216,48 @@ LABEL:
 				i++
 				if i == 4 { //每个地区取前三个有效期号，无剩余交易量则取下一个地区
 					logrus.Warnf("gcid %v order is full", val.Gcid)
-					goto LABEL
+					break
 				}
 				continue
 			}
-			gcid = val.Gcid
-			gpid = val.Gpid
-			fieldNum = strings.Replace(v["fieldnum"].(string), "\"", "", -1)
-			return gcid, gpid, fieldNum, err
+			//gcid = val.Gcid
+			//gpid = val.Gpid
+			//fieldNum = strings.Replace(v["fieldnum"].(string), "\"", "", -1)
+
+			candicate["gcid"] = val.Gcid
+			candicate["gpid"] = val.Gpid
+			candicate["fieldNum"] = strings.Replace(v["fieldnum"].(string), "\"", "", -1)
+			t, err := time.Parse("2006-01-02 15:04", v["kjtime"].(string))
+			if err != nil {
+				log.Errorf("time parse %v error: %v", v["kjtime"].(string), err)
+				return 0, 0, "", fmt.Errorf("parse time error: %v", err)
+			}
+			candicate["kjTime"] = t
+			candidates = append(candidates, candicate)
+			break
 		}
 	}
-	return
+
+	min := make(map[string]interface{})
+	for i := 0; i < len(candidates); i++ {
+		if i == 0 {
+			min = candidates[0]
+		} else if candidates[i]["kjTime"].(time.Time).Unix() < min["kjTime"].(time.Time).Unix() {
+			min = candidates[i]
+		}
+	}
+
+	if len(candidates) > 0 {
+		return min["gcid"].(int), min["gpid"].(int), min["fieldNum"].(string), nil
+	}
+	return 0, 0, "", fmt.Errorf("get no condicate")
 }
 
 func (u *user) SendDDMsg(content, phone string) error {
 	para := fmt.Sprintf(paraFormat, content, phone)
-
-	resp, err := client.HttpPost(u.Url, para, "", "")
+	_, err := client.HttpPost(u.Url, para, "", "")
 	if err != nil {
 		return err
 	}
-	logrus.Infof("send dd msg resp: %v", string(resp))
 	return nil
 }
