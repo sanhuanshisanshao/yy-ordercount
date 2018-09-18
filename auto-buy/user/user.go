@@ -3,7 +3,6 @@ package user
 import (
 	"encoding/json"
 	"fmt"
-	"git.weipaitang.com/ai/expediency/log"
 	"github.com/sirupsen/logrus"
 	"math/rand"
 	"os"
@@ -229,7 +228,7 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNu
 			candicate["fieldNum"] = strings.Replace(v["fieldnum"].(string), "\"", "", -1)
 			t, err := time.Parse("2006-01-02 15:04", v["kjtime"].(string))
 			if err != nil {
-				log.Errorf("time parse %v error: %v", v["kjtime"].(string), err)
+				logrus.Errorf("time parse %v error: %v", v["kjtime"].(string), err)
 				return 0, 0, "", "", fmt.Errorf("parse time error: %v", err)
 			}
 			candicate["kjTime"] = t
