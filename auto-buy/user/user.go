@@ -65,10 +65,10 @@ func (u *Users) Add(cookie string) {
 func (u *Users) Delete(cookie string) {
 	u.Lock()
 	defer u.Unlock()
-	for _, v := range u.Users {
-		if v.Cookie == cookie {
+	for i := 0; i < len(u.Users); i++ {
+		if u.Users[i].Cookie == cookie {
 			logrus.Infof("delete cookie success")
-			v.IsDeleted = true
+			u.Users[i].IsDeleted = true
 		}
 	}
 }
@@ -81,13 +81,13 @@ func (u *Users) AutoBuy() {
 				t++
 				logrus.Infof("start to Auto buy .... ")
 				if s := v.autoBuy(); s == "over" {
-					go u.Delete(v.Cookie)
+					u.Delete(v.Cookie)
 				}
 			}
 		}
 		if t == 0 {
 			logrus.Warnf("no account to buy then stop server ...")
-			os.Exit(200)
+			os.Exit(0)
 		}
 
 		<-time.After(2 * time.Minute)
@@ -105,7 +105,7 @@ func (u *user) autoBuy() (s string) {
 	}{}
 
 	if u.IsDeleted {
-		logrus.Warnf("cookie %v is deleted")
+		logrus.Warnf("cookie %v is deleted", u.Cookie)
 		return
 	}
 	account, err := u.getAccount() //获取账户余额
