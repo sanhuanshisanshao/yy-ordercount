@@ -12,6 +12,7 @@ import (
 	"time"
 	"yy-ordercount/auto-buy/baseinfo"
 	"yy-ordercount/auto-buy/client"
+	"yy-ordercount/auto-buy/spider"
 	"yy-ordercount/util"
 )
 
@@ -129,7 +130,6 @@ func (u *user) autoBuy() (s string) {
 	para.Gpid = gpID
 	para.FieldNum = field
 	para.Price = (int(account) / 100) * 100
-	//para.Price = 100
 
 	ref := fmt.Sprintf("http://www.uuplush.com/buyorder?gcid=%d&gpid=%d&fieldnum=%s", gcID, gpID, field)
 	b, _ := json.Marshal(&para)
@@ -140,7 +140,7 @@ func (u *user) autoBuy() (s string) {
 	}
 
 	if strings.Contains(string(resp), "每日限20单") {
-		u.SendDDMsg(fmt.Sprintf("下单 ¥%v 失败: %v", para.Price, "每日限20单"), u.Phone)
+		u.SendDDMsg(fmt.Sprintf("下单 ¥%v 失败 %v", para.Price, "每日限20单"), u.Phone)
 		s = "over"
 		return
 	}
@@ -154,11 +154,18 @@ func (u *user) autoBuy() (s string) {
 		return
 	}
 
-	err = u.SendDDMsg(fmt.Sprintf("下单 %v %v ¥%v: %v", area, field, para.Price, msg["message"]), u.Phone)
-	if err != nil {
-		logrus.Errorf("send DD msg error：%v", err)
-		return
+	//查询今日剩余体验次数
+	url := fmt.Sprintf("http://www.uuplush.com/buyorder?gcid=%d&gpid=%d&fieldnum=%s", gcID, gpID, field)
+	str, err := client.HttpGet(url, u.Cookie)
+	if err != nil || len(str) == 0 {
+		logrus.Warnf("http get today remain free times failed")
 	}
+	times, err := spider.GetRemainFreeTimes(str)
+	if err != nil || len(str) == 0 {
+		logrus.Warnf("spider get today remain free times failed")
+	}
+
+	u.SendDDMsg(fmt.Sprintf("下单 %v %v ¥%v %v \n今日保本体验剩余 %v", area, field, para.Price, msg["message"], times), u.Phone)
 	return
 }
 
@@ -219,9 +226,6 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNu
 				}
 				continue
 			}
-			//gcid = val.Gcid
-			//gpid = val.Gpid
-			//fieldNum = strings.Replace(v["fieldnum"].(string), "\"", "", -1)
 
 			candicate["gcid"] = val.Gcid
 			candicate["gpid"] = val.Gpid

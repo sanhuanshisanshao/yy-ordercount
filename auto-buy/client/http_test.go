@@ -28,3 +28,14 @@ func TestRandom(t *testing.T) {
 		fmt.Println(rand.Intn(999-100) + 100)
 	}
 }
+
+func TestHttpGet(t *testing.T) {
+	url := "http://www.uuplush.com/buyorder?gcid=17&gpid=46&fieldnum=180919-39"
+	cookie := "userid=4904; username=4904; ASP.NET_SessionId=5ynj4k45lrzrj21ygsxurjjo"
+	resp, err := HttpGet(url, cookie)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
+	fmt.Println(resp)
+}

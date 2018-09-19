@@ -42,3 +42,20 @@ func httpPost(urlStr string, reqBody string, cookie, referer string) (respBytes 
 	}
 	return body, nil
 }
+
+func HttpGet(url, cookie string) (string, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Cookie", cookie)
+	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36")
+
+	resp, err := client.Do(req)
+	r, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(r), nil
+}
