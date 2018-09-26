@@ -3,7 +3,6 @@ package user
 import (
 	"encoding/json"
 	"fmt"
-	"git.weipaitang.com/ai/expediency/log"
 	"github.com/sirupsen/logrus"
 	"math/rand"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"time"
 	"yy-ordercount/auto-buy/baseinfo"
 	"yy-ordercount/auto-buy/client"
+	"yy-ordercount/auto-buy/spider"
 	"yy-ordercount/util"
 )
 
@@ -66,10 +66,10 @@ func (u *Users) Add(cookie string) {
 func (u *Users) Delete(cookie string) {
 	u.Lock()
 	defer u.Unlock()
-	for _, v := range u.Users {
-		if v.Cookie == cookie {
+	for i := 0; i < len(u.Users); i++ {
+		if u.Users[i].Cookie == cookie {
 			logrus.Infof("delete cookie success")
-			v.IsDeleted = true
+			u.Users[i].IsDeleted = true
 		}
 	}
 }
@@ -81,17 +81,36 @@ func (u *Users) AutoBuy() {
 			if v.IsDeleted == false {
 				t++
 				logrus.Infof("start to Auto buy .... ")
-				if s := v.autoBuy(); s == "over" {
-					go u.Delete(v.Cookie)
+				s, err := v.AutoBuy()
+				if s == "over" {
+					u.Delete(v.Cookie)
+				}
+				if err != nil {
+					logrus.Errorf("Auto buy error: %v", err)
 				}
 			}
 		}
 		if t == 0 {
 			logrus.Warnf("no account to buy then stop server ...")
-			os.Exit(200)
+			os.Exit(0)
 		}
 
 		<-time.After(2 * time.Minute)
+	}
+}
+
+func (u *user) AutoBuy() (s string, err error) {
+	ch := make(chan int, 1)
+	go func() {
+		s = u.autoBuy()
+		ch <- 1
+	}()
+
+	select {
+	case <-time.After(90 * time.Second):
+		return "", fmt.Errorf("timeout")
+	case <-ch:
+		return
 	}
 }
 
@@ -106,20 +125,21 @@ func (u *user) autoBuy() (s string) {
 	}{}
 
 	if u.IsDeleted {
-		logrus.Warnf("cookie %v is deleted")
+		logrus.Warnf("cookie %v is deleted", u.Cookie)
 		return
 	}
 	account, err := u.getAccount() //获取账户余额
 	if err != nil {
 		logrus.Errorf("auto buy get account failed：%v", err)
+		u.SendDDMsg(fmt.Sprintf("Cookie已过期，请重新设置"), u.Phone)
 		return
 	}
 	if (int(account) / 100) < 2 { //余额低于200不能下单
-		logrus.Warnf("auto buy get account ¥%.2f less than ¥200", account)
+		logrus.Infof("auto buy get account ¥%.2f less than ¥200", account)
 		return
 	}
 
-	gcID, gpID, area, field, err := u.getOrder(account) //查询最近可下单期号
+	gcID, gpID, area, field, open, err := u.getOrder(account) //查询最近可下单期号
 	if err != nil {
 		logrus.Errorf("auto buy try to buy failed：%v", err)
 		return
@@ -130,7 +150,6 @@ func (u *user) autoBuy() (s string) {
 	para.Gpid = gpID
 	para.FieldNum = field
 	para.Price = (int(account) / 100) * 100
-	//para.Price = 100
 
 	ref := fmt.Sprintf("http://www.uuplush.com/buyorder?gcid=%d&gpid=%d&fieldnum=%s", gcID, gpID, field)
 	b, _ := json.Marshal(&para)
@@ -141,7 +160,7 @@ func (u *user) autoBuy() (s string) {
 	}
 
 	if strings.Contains(string(resp), "每日限20单") {
-		u.SendDDMsg(fmt.Sprintf("下单 ¥%v 失败: %v", para.Price, "每日限20单"), u.Phone)
+		u.SendDDMsg(fmt.Sprintf("下单 ¥%v 失败 %v", para.Price, "每日限20单"), u.Phone)
 		s = "over"
 		return
 	}
@@ -155,11 +174,18 @@ func (u *user) autoBuy() (s string) {
 		return
 	}
 
-	err = u.SendDDMsg(fmt.Sprintf("下单 %v %v ¥%v: %v", area, field, para.Price, msg["message"]), u.Phone)
-	if err != nil {
-		logrus.Errorf("send DD msg error：%v", err)
-		return
+	//查询今日剩余体验次数
+	url := fmt.Sprintf("http://www.uuplush.com/buyorder?gcid=%d&gpid=%d&fieldnum=%s", gcID, gpID, field)
+	str, err := client.HttpGet(url, u.Cookie)
+	if err != nil || len(str) == 0 {
+		logrus.Warnf("http get today remain free times failed")
 	}
+	times, err := spider.GetRemainFreeTimes(str)
+	if err != nil || len(str) == 0 {
+		logrus.Warnf("spider get today remain free times failed")
+	}
+
+	u.SendDDMsg(fmt.Sprintf("下单 %v %v ¥%v %v\n开奖时间 %v\n今日保本体验剩余 %v 次", area, field, para.Price, msg["message"], open, times), u.Phone)
 	return
 }
 
@@ -169,18 +195,16 @@ func (u *user) getAccount() (float64, error) {
 	referer := "http://www.uuplush.com/v2/index?gcid=11"
 	resp, err := client.HttpPost(url, "", u.Cookie, referer)
 	if err != nil {
-		logrus.Errorf("get account error: %v", err)
 		return 0, err
 	}
 	f, err := strconv.ParseFloat(string(resp[1:len(resp)-1]), 32)
 	if err != nil {
-		logrus.Errorf("get account parse float error: %v", err)
 		return 0, err
 	}
 	return f, nil
 }
 
-func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNum string, err error) {
+func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNum string, openTime string, err error) {
 	url := "http://www.uuplush.com/user/fieldlist"
 	var p = struct {
 		Gcid int `json:"gcid"`
@@ -196,11 +220,11 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNu
 		b, _ := json.Marshal(&p)
 		resp, err := client.HttpPost(url, string(b), u.Cookie, "")
 		if err != nil {
-			return gcid, gpid, area, fieldNum, err
+			return gcid, gpid, area, fieldNum, openTime, err
 		}
 		if len(resp) < 10 {
 			logrus.Errorf("http post %v error", string(resp))
-			return gcid, gpid, area, fieldNum, fmt.Errorf("http post %v error", string(resp))
+			return gcid, gpid, area, fieldNum, openTime, fmt.Errorf("http post %v error", string(resp))
 		}
 		m := util.ConvertResponse(resp)
 
@@ -210,7 +234,7 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNu
 			f, err := strconv.ParseFloat(s, 32)
 			if err != nil {
 				logrus.Errorf("get order parse float error: %v", err)
-				return gcid, gpid, area, fieldNum, err
+				return gcid, gpid, area, fieldNum, openTime, err
 			}
 			if f <= price {
 				i++
@@ -220,17 +244,14 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNu
 				}
 				continue
 			}
-			//gcid = val.Gcid
-			//gpid = val.Gpid
-			//fieldNum = strings.Replace(v["fieldnum"].(string), "\"", "", -1)
 
 			candicate["gcid"] = val.Gcid
 			candicate["gpid"] = val.Gpid
 			candicate["fieldNum"] = strings.Replace(v["fieldnum"].(string), "\"", "", -1)
 			t, err := time.Parse("2006-01-02 15:04", v["kjtime"].(string))
 			if err != nil {
-				log.Errorf("time parse %v error: %v", v["kjtime"].(string), err)
-				return 0, 0, "", "", fmt.Errorf("parse time error: %v", err)
+				logrus.Errorf("time parse %v error: %v", v["kjtime"].(string), err)
+				return 0, 0, "", "", "", fmt.Errorf("parse time error: %v", err)
 			}
 			candicate["kjTime"] = t
 			candicate["area"] = val.Area
@@ -249,9 +270,9 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNu
 	}
 
 	if len(candidates) > 0 {
-		return min["gcid"].(int), min["gpid"].(int), min["area"].(string), min["fieldNum"].(string), nil
+		return min["gcid"].(int), min["gpid"].(int), min["area"].(string), min["fieldNum"].(string), min["kjTime"].(time.Time).Format("2006-01-02 15:04:05"), nil
 	}
-	return 0, 0, "", "", fmt.Errorf("get no condicate")
+	return 0, 0, "", "", "", fmt.Errorf("get no condicate")
 }
 
 func (u *user) SendDDMsg(content, phone string) error {
