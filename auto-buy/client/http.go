@@ -53,9 +53,9 @@ func HttpGet(url, cookie string) (string, error) {
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36")
 
 	resp, err := client.Do(req)
-	r, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
+	r, _ := ioutil.ReadAll(resp.Body)
 	return string(r), nil
 }
