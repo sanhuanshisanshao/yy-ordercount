@@ -116,8 +116,8 @@ func (u *user) AutoBuy() (s string, err error) {
 
 func (u *user) autoBuy() (s string) {
 	URL := "http://www.uuplush.com/user/buyorder"
-	ip := strings.Replace(util.GetExternalIP(), "\n", "", -1)
-	stopUrl := fmt.Sprintf("http://%s:9998/stop", ip)
+	//ip := strings.Replace(util.GetExternalIP(), "\n", "", -1)
+	//stopUrl := fmt.Sprintf("http://%s:9998/stop", ip)
 	para := struct {
 		OrderNum int    `json:"ordernum"`
 		Gcid     int    `json:"gcid"`
@@ -133,7 +133,7 @@ func (u *user) autoBuy() (s string) {
 	account, err := u.getAccount() //获取账户余额
 	if err != nil {
 		logrus.Errorf("auto buy get account failed：%v", err)
-		u.SendDDMsg(fmt.Sprintf("Cookie已过期，请重新设置\n点击停止服务 %s", stopUrl), u.Phone)
+		//u.SendDDMsg(fmt.Sprintf("Cookie已过期，请重新设置\n点击停止服务 %s", stopUrl), u.Phone)
 		return
 	}
 	if (int(account) / 100) < 10 { //余额低于1000不能下单
