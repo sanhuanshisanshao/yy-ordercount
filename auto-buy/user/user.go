@@ -107,8 +107,8 @@ func (u *user) AutoBuy() (s string, err error) {
 	}()
 
 	select {
-	case <-time.After(90 * time.Second):
-		return "", fmt.Errorf("timeout")
+	case <-time.After(60 * time.Second):
+		return "", fmt.Errorf("auto buy timeout")
 	case <-ch:
 		return
 	}
@@ -116,6 +116,8 @@ func (u *user) AutoBuy() (s string, err error) {
 
 func (u *user) autoBuy() (s string) {
 	URL := "http://www.uuplush.com/user/buyorder"
+	ip := strings.Replace(util.GetExternalIP(), "\n", "", -1)
+	stopUrl := fmt.Sprintf("http://%s:9998/stop", ip)
 	para := struct {
 		OrderNum int    `json:"ordernum"`
 		Gcid     int    `json:"gcid"`
@@ -131,11 +133,11 @@ func (u *user) autoBuy() (s string) {
 	account, err := u.getAccount() //获取账户余额
 	if err != nil {
 		logrus.Errorf("auto buy get account failed：%v", err)
-		u.SendDDMsg(fmt.Sprintf("Cookie已过期，请重新设置"), u.Phone)
+		u.SendDDMsg(fmt.Sprintf("Cookie已过期，请重新设置\n点击停止服务 %s", stopUrl), u.Phone)
 		return
 	}
-	if (int(account) / 100) < 2 { //余额低于200不能下单
-		logrus.Infof("auto buy get account ¥%.2f less than ¥200", account)
+	if (int(account) / 100) < 10 { //余额低于1000不能下单
+		logrus.Infof("auto buy get account ¥%.2f less than ¥1000", account)
 		return
 	}
 
@@ -236,9 +238,9 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNu
 				logrus.Errorf("get order parse float error: %v", err)
 				return gcid, gpid, area, fieldNum, openTime, err
 			}
-			if f <= price {
+			if (price > 5000 && f <= 51000+price) || f <= 2*price {
 				i++
-				if i == 4 { //每个地区取前三个有效期号，无剩余交易量则取下一个地区
+				if i == 5 { //每个地区取前4个有效期号，无剩余交易量则取下一个地区
 					logrus.Warnf("gcid %v order is full", val.Gcid)
 					break
 				}
@@ -270,6 +272,10 @@ func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNu
 	}
 
 	if len(candidates) > 0 {
+		//禁止下第二天的单
+		if min["kjTime"].(time.Time).Hour() < time.Now().Hour() {
+			return 0, 0, "", "", "", fmt.Errorf("order kjTime %v is tomorrow", min["kjTime"].(time.Time).Format("2006-01-02 15:04:05"))
+		}
 		return min["gcid"].(int), min["gpid"].(int), min["area"].(string), min["fieldNum"].(string), min["kjTime"].(time.Time).Format("2006-01-02 15:04:05"), nil
 	}
 	return 0, 0, "", "", "", fmt.Errorf("get no condicate")

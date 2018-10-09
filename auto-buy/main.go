@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"os"
 	"yy-ordercount/auto-buy/baseinfo"
 	"yy-ordercount/auto-buy/config"
 	"yy-ordercount/auto-buy/user"
@@ -13,13 +14,10 @@ func Ping(resp http.ResponseWriter, req *http.Request) {
 	resp.Write([]byte("OK"))
 }
 
-func SetCookie(resp http.ResponseWriter, req *http.Request) {
-	cookie := req.FormValue("cookie")
-	log.Infof("set cookie %v success", cookie)
-	if len(cookie) > 0 {
-		user.UniqueUsers.Add(cookie)
-	}
+func Stop(resp http.ResponseWriter, req *http.Request) {
 	resp.Write([]byte("success"))
+	log.Warnf("start stop auto-buy server")
+	os.Exit(0)
 }
 
 func init() {
@@ -42,7 +40,7 @@ func main() {
 	baseinfo.NewFieldInfo()
 
 	http.HandleFunc("/ping", Ping)
-	http.HandleFunc("/setcookie", SetCookie)
+	http.HandleFunc("/stop", Stop)
 
 	log.Fatal(http.ListenAndServe("0.0.0.0:9998", nil))
 }
