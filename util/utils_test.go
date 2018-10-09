@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -21,4 +22,8 @@ func TestTimeConvert(t *testing.T) {
 	fmt.Println(tim.After(time.Now().Add(8 * time.Hour).UTC()))
 	fmt.Println(tim)
 	fmt.Println(time.Now().Add(8 * time.Hour).UTC())
+}
+
+func TestGetExternalIP(t *testing.T) {
+	fmt.Println(strings.Replace(GetExternalIP(), "\n", "", -1))
 }

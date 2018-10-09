@@ -1,8 +1,12 @@
 package util
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -34,4 +38,17 @@ func Subtraction(a, b string) float64 {
 	i, _ := strconv.ParseFloat(a, 0)
 	j, _ := strconv.ParseFloat(b, 0)
 	return i - j
+}
+
+func GetExternalIP() string {
+	resp, err := http.Get("http://myexternalip.com/raw")
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+	defer resp.Body.Close()
+	content, _ := ioutil.ReadAll(resp.Body)
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
+	return string(content)
 }
