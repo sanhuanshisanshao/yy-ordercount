@@ -17,7 +17,7 @@ const (
 	MAX_GCID    = 8
 	REDIS_ADDR  = "0.0.0.0:6379"
 	KEY_FORMATE = "%v_%v_%v_%v"
-	URL         = "http://www.uuplush.com/user/fieldlist"
+	URL         = "https://uu.98765u.cn/v2/user/fieldlist"
 )
 
 type para struct {
