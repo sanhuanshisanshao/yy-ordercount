@@ -115,7 +115,7 @@ func (u *user) AutoBuy() (s string, err error) {
 }
 
 func (u *user) autoBuy() (s string) {
-	URL := "http://www.uuplush.com/user/buyorder"
+	URL := "https://uu.98765u.cn/user/buyorder"
 	para := struct {
 		OrderNum int    `json:"ordernum"`
 		Gcid     int    `json:"gcid"`
@@ -151,7 +151,7 @@ func (u *user) autoBuy() (s string) {
 	para.FieldNum = field
 	para.Price = (int(account) / 100) * 100
 
-	ref := fmt.Sprintf("http://www.uuplush.com/buyorder?gcid=%d&gpid=%d&fieldnum=%s", gcID, gpID, field)
+	ref := fmt.Sprintf("https://uu.98765u.cn/buyorder?gcid=%d&gpid=%d&fieldnum=%s", gcID, gpID, field)
 	b, _ := json.Marshal(&para)
 	resp, err := client.HttpPost(URL, string(b), u.Cookie, ref) //下单
 	if err != nil {
@@ -175,7 +175,7 @@ func (u *user) autoBuy() (s string) {
 	}
 
 	//查询今日剩余体验次数
-	url := fmt.Sprintf("http://www.uuplush.com/buyorder?gcid=%d&gpid=%d&fieldnum=%s", gcID, gpID, field)
+	url := fmt.Sprintf("https://uu.98765u.cn/buyorder?gcid=%d&gpid=%d&fieldnum=%s", gcID, gpID, field)
 	str, err := client.HttpGet(url, u.Cookie)
 	if err != nil || len(str) == 0 {
 		logrus.Warnf("http get today remain free times failed")
@@ -191,8 +191,8 @@ func (u *user) autoBuy() (s string) {
 
 //getAccount 获取账户余额
 func (u *user) getAccount() (float64, error) {
-	url := "http://www.uuplush.com/user/refyue"
-	referer := "http://www.uuplush.com/v2/index?gcid=11"
+	url := "https://uu.98765u.cn/user/refyue"
+	referer := "https://uu.98765u.cn/v2/index?gcid=11"
 	resp, err := client.HttpPost(url, "", u.Cookie, referer)
 	if err != nil {
 		return 0, err
@@ -205,7 +205,7 @@ func (u *user) getAccount() (float64, error) {
 }
 
 func (u *user) getOrder(price float64) (gcid int, gpid int, area string, fieldNum string, openTime string, err error) {
-	url := "http://www.uuplush.com/user/fieldlist"
+	url := "https://uu.98765u.cn/user/fieldlist"
 	var p = struct {
 		Gcid int `json:"gcid"`
 		Gpid int `json:"gpid"`
