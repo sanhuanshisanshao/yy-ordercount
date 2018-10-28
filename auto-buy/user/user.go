@@ -140,6 +140,10 @@ func (u *user) autoBuy() (s string) {
 		logrus.Infof("auto buy get account ¥%.2f less than ¥1000", account)
 		return
 	}
+	
+	if account > 100000 {
+		account = 100000
+	}
 
 	gcID, gpID, area, field, open, err := u.getOrder(account) //查询最近可下单期号
 	if err != nil {
