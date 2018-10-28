@@ -20,7 +20,7 @@ func httpPost(urlStr string, reqBody string, cookie string) (respBytes []byte, e
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Cookie", cookie)
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36")
-	req.Header.Add("Referer", "http://www.uuplush.com/buyorder?gcid=12&gpid=31&fieldnum=180910-74")
+	req.Header.Add("Referer", "https://uu.98765u.cn/buyorder?gcid=12&gpid=31&fieldnum=180910-74") //v2
 
 	if err != nil {
 		return nil, err
